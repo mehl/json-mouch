@@ -16,13 +16,21 @@ Anschließend `.env` anpassen.
 - `COUCHDB_URL` – Basis-URL deiner CouchDB (z. B. `http://127.0.0.1:5984`)
 - `COUCHDB_USERNAME` – optionaler Benutzername
 - `COUCHDB_PASSWORD` – optionales Passwort
-- `COUCHDB_DATABASE` – Name der Datenbank
+- `COUCHDB_DATABASE` – optional, falls nicht per CLI übergeben
 - `COUCHDB_PAGE_SIZE` – optional, Standard `500`
 
 ## Ausführen
 
+Mit Datenbank aus `.env`:
+
 ```bash
 bun run start
+```
+
+Mit expliziter Datenbank:
+
+```bash
+bun run start -- --database [datenbankname]
 ```
 
 Ausgabe-Datei:
