@@ -13,11 +13,17 @@ Anschließend `.env` anpassen.
 
 ## Konfiguration (.env)
 
+Aktuell wird ein CouchDB-Exportprofil genutzt. Die Konfiguration ist im Code bereits so getrennt, dass später weitere Datenbank-Verbindungen/Profile ergänzt werden können.
+
 - `COUCHDB_URL` – Basis-URL deiner CouchDB (z. B. `http://127.0.0.1:5984`)
 - `COUCHDB_USERNAME` – optionaler Benutzername
 - `COUCHDB_PASSWORD` – optionales Passwort
 - `COUCHDB_DATABASE` – optional, falls nicht per CLI übergeben
 - `COUCHDB_PAGE_SIZE` – optional, Standard `500`
+
+## Technischer Hinweis
+
+Der Zugriff auf CouchDB erfolgt über das npm-Paket [`nano`](https://www.npmjs.com/package/nano).
 
 ## Ausführen
 

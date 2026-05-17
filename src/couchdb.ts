@@ -1,58 +1,29 @@
 import { createWriteStream } from "node:fs";
-import type { EnvConfig } from "./config";
+import { join } from "node:path";
+import Nano from "nano";
+import type { CouchDbExportConfig } from "./config";
 
-interface CouchAllDocsResponse<T> {
-  rows: Array<{
-    id: string;
-    key: string;
-    doc?: T;
-  }>;
-}
+function buildConnectionUrl(config: CouchDbExportConfig): string {
+  const { url, username, password } = config.connection;
 
-function buildAuthHeader(username?: string, password?: string): HeadersInit {
   if (!username) {
-    return {};
+    return url;
   }
 
-  const token = Buffer.from(`${username}:${password ?? ""}`).toString("base64");
-  return {
-    Authorization: `Basic ${token}`,
-  };
+  const parsedUrl = new URL(url);
+  parsedUrl.username = username;
+  parsedUrl.password = password ?? "";
+  return parsedUrl.toString();
 }
 
-async function fetchDocsPage(
-  config: EnvConfig,
-  startkeyDocId?: string,
-): Promise<CouchAllDocsResponse<Record<string, unknown>>> {
-  const params = new URLSearchParams({
-    include_docs: "true",
-    limit: String(config.pageSize),
-  });
-
-  if (startkeyDocId) {
-    params.set("startkey_docid", startkeyDocId);
-  }
-
-  const url = `${config.couchUrl}/${encodeURIComponent(config.database)}/_all_docs?${params.toString()}`;
-
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      ...buildAuthHeader(config.username, config.password),
-      Accept: "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Fehler beim Lesen aus CouchDB (${response.status}): ${body}`);
-  }
-
-  return (await response.json()) as CouchAllDocsResponse<Record<string, unknown>>;
+function createCouchDbClient(config: CouchDbExportConfig) {
+  return Nano(buildConnectionUrl(config));
 }
 
-export async function exportDatabaseToJsonl(config: EnvConfig): Promise<number> {
-  const writer = createWriteStream(config.outputFile, { encoding: "utf8" });
+export async function exportDatabaseToJsonl(config: CouchDbExportConfig): Promise<number> {
+  const writer = createWriteStream(join(process.cwd(), config.outputFile), { encoding: "utf8" });
+  const client = createCouchDbClient(config);
+  const db = client.db.use<Record<string, unknown>>(config.database);
 
   let lastDocId: string | undefined;
   let total = 0;
@@ -60,7 +31,11 @@ export async function exportDatabaseToJsonl(config: EnvConfig): Promise<number> 
 
   try {
     while (true) {
-      const page = await fetchDocsPage(config, lastDocId);
+      const page = await db.list({
+        include_docs: true,
+        limit: config.pageSize,
+        ...(lastDocId ? { startkey_docid: lastDocId } : {}),
+      });
 
       if (page.rows.length === 0) {
         break;
